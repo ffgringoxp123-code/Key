@@ -180,213 +180,198 @@
     </style>
 </head>
 <body>
-
 <div class="container">
     <h1>SAKURA</h1>
     <div class="sub">KEY GENERATOR <span class="badge">v2.0</span></div>
-
-    <!-- Số ngày -->
     <div class="form-group">
-        <label>Thời gian hết hạn (ngày)</label>
+        <label>Thoi gian het han (ngay)</label>
         <input type="number" id="dayInput" value="7" min="1" max="365">
     </div>
-
-    <!-- Nút tạo key -->
-    <button class="btn" id="generateBtn" style="width:100%;margin-bottom:16px;">
-        TẠO KEY MỚI
-    </button>
-
-    <!-- Hiển thị key -->
-    <div class="key-display empty" id="keyDisplay">Chưa có key. Nhấn "Tạo key mới" để bắt đầu.</div>
-
-    <!-- Thông tin key -->
+    <button class="btn" id="generateBtn" style="width:100%;margin-bottom:16px;">TAO KEY MOI</button>
+    <div class="key-display empty" id="keyDisplay">Chua co key. Nhan "Tao key moi" de bat dau.</div>
     <div class="info" id="infoArea">
-        <span>Trạng thái: <span id="statusText">—</span></span>
-        <span>Hết hạn: <span id="expiryText">—</span></span>
+        <span>Trang thai: <span id="statusText">—</span></span>
+        <span>Het han: <span id="expiryText">—</span></span>
     </div>
-
-    <!-- Hàng nút -->
     <div class="row" style="margin-top:16px;gap:10px;">
-        <input type="text" id="copyField" placeholder="Nhập key để kiểm tra..." readonly>
+        <input type="text" id="copyField" placeholder="Nhap key de kiem tra..." readonly>
         <button class="btn btn-copy" id="copyBtn">COPY</button>
     </div>
-
-    <!-- Thông báo -->
     <div class="status-msg" id="statusMsg"></div>
-
-    <div class="footer">SAKURA BETA · KEY TỰ ĐỘNG HỦY SAU THỜI GIAN CÀI ĐẶT</div>
+    <div class="footer">SAKURA BETA · KEY TU DONG HUY SAU THOI GIAN CAI DAT</div>
 </div>
 
 <script>
-    (function() {
-        // ─── DOM ──────────────────────────────────────────────────────
-        const $ = id => document.getElementById(id);
-        const dayInput    = $('dayInput');
-        const generateBtn = $('generateBtn');
-        const keyDisplay  = $('keyDisplay');
-        const copyField   = $('copyField');
-        const copyBtn     = $('copyBtn');
-        const statusText  = $('statusText');
-        const expiryText  = $('expiryText');
-        const statusMsg   = $('statusMsg');
+(function() {
+    var dayInput = document.getElementById('dayInput');
+    var generateBtn = document.getElementById('generateBtn');
+    var keyDisplay = document.getElementById('keyDisplay');
+    var copyField = document.getElementById('copyField');
+    var copyBtn = document.getElementById('copyBtn');
+    var statusText = document.getElementById('statusText');
+    var expiryText = document.getElementById('expiryText');
+    var statusMsg = document.getElementById('statusMsg');
 
-        // ─── Storage keys ─────────────────────────────────────────────
-        const STORAGE_KEY    = 'sakura_key';
-        const STORAGE_EXPIRY = 'sakura_expiry';
+    function generateKey(length) {
+        var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        var key = '';
+        for (var i = 0; i < length; i++) {
+            key += chars.charAt(Math.floor(Math.random() * chars.length));
+            if ((i + 1) % 6 === 0 && i < length - 1) key += '-';
+        }
+        return key;
+    }
 
-        // ─── Helpers ──────────────────────────────────────────────────
-        function generateKey(length) {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let key = '';
-            for (let i = 0; i < length; i++) {
-                key += chars.charAt(Math.floor(Math.random() * chars.length));
-                if ((i + 1) % 6 === 0 && i < length - 1) key += '-';
-            }
-            return key;
+    function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function formatDate(ts) {
+        var d = new Date(ts);
+        return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
+    function setMsg(text, color) {
+        statusMsg.textContent = text;
+        statusMsg.style.color = color || '#ffcc00';
+    }
+
+    function saveKey(key, expiry) {
+        try {
+            localStorage.setItem('sakura_key', key);
+            localStorage.setItem('sakura_expiry', String(expiry));
+        } catch(e) {}
+    }
+
+    function loadKey() {
+        try {
+            var key = localStorage.getItem('sakura_key');
+            var expiry = localStorage.getItem('sakura_expiry');
+            return { key: key, expiry: expiry ? parseInt(expiry, 10) : null };
+        } catch(e) {
+            return { key: null, expiry: null };
+        }
+    }
+
+    function clearKey() {
+        try {
+            localStorage.removeItem('sakura_key');
+            localStorage.removeItem('sakura_expiry');
+        } catch(e) {}
+    }
+
+    function isExpired(expiry) {
+        return Date.now() > expiry;
+    }
+
+    function renderState() {
+        var data = loadKey();
+        var key = data.key;
+        var expiry = data.expiry;
+
+        if (!key || !expiry) {
+            keyDisplay.textContent = 'Chua co key. Nhan "Tao key moi" de bat dau.';
+            keyDisplay.className = 'key-display empty';
+            statusText.textContent = '—';
+            statusText.className = '';
+            expiryText.textContent = '—';
+            copyField.value = '';
+            return;
         }
 
-        function pad(n) { return n < 10 ? '0' + n : '' + n; }
+        var expired = isExpired(expiry);
+        keyDisplay.textContent = key;
+        keyDisplay.className = 'key-display';
 
-        function formatDate(ts) {
-            const d = new Date(ts);
-            return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
-                   ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        if (expired) {
+            statusText.textContent = 'HET HAN';
+            statusText.className = 'expired';
+            keyDisplay.style.color = '#ff4444';
+            keyDisplay.style.textShadow = '0 0 10px rgba(255,68,68,0.15)';
+        } else {
+            statusText.textContent = 'CON HIEU LUC';
+            statusText.className = 'active';
+            keyDisplay.style.color = '#66ff99';
+            keyDisplay.style.textShadow = '0 0 10px rgba(102,255,153,0.15)';
         }
 
-        function setMsg(text, color) {
-            statusMsg.textContent = text;
-            statusMsg.style.color = color || '#ffcc00';
+        expiryText.textContent = formatDate(expiry);
+        copyField.value = key;
+    }
+
+    function generateNewKey() {
+        var days = parseInt(dayInput.value, 10);
+        if (isNaN(days) || days < 1) days = 1;
+        if (days > 365) days = 365;
+        dayInput.value = days;
+
+        var newKey = generateKey(24);
+        var expiry = Date.now() + days * 24 * 60 * 60 * 1000;
+
+        saveKey(newKey, expiry);
+        renderState();
+        setMsg('Key moi da duoc tao! Het han sau ' + days + ' ngay.', '#66ff99');
+    }
+
+    function copyKey() {
+        var data = loadKey();
+        var key = data.key;
+        var expiry = data.expiry;
+
+        if (!key) {
+            setMsg('Khong co key de copy. Hay tao key truoc.', '#ff4444');
+            return;
         }
 
-        // ─── Key management ──────────────────────────────────────────
-        function saveKey(key, expiry) {
-            localStorage.setItem(STORAGE_KEY, key);
-            localStorage.setItem(STORAGE_EXPIRY, String(expiry));
+        if (expiry && isExpired(expiry)) {
+            setMsg('Key da het han. Hay tao key moi.', '#ff4444');
+            return;
         }
 
-        function loadKey() {
-            const key    = localStorage.getItem(STORAGE_KEY);
-            const expiry = localStorage.getItem(STORAGE_EXPIRY);
-            return { key, expiry: expiry ? parseInt(expiry, 10) : null };
-        }
+        copyField.value = key;
+        copyField.select();
+        copyField.setSelectionRange(0, 99999);
 
-        function clearKey() {
-            localStorage.removeItem(STORAGE_KEY);
-            localStorage.removeItem(STORAGE_EXPIRY);
-        }
-
-        function isExpired(expiry) {
-            return Date.now() > expiry;
-        }
-
-        // ─── UI ───────────────────────────────────────────────────────
-        function renderState() {
-            const { key, expiry } = loadKey();
-
-            if (!key || !expiry) {
-                keyDisplay.textContent = 'Chưa có key. Nhấn "Tạo key mới" để bắt đầu.';
-                keyDisplay.className = 'key-display empty';
-                statusText.textContent = '—';
-                statusText.className = '';
-                expiryText.textContent = '—';
-                copyField.value = '';
-                return;
-            }
-
-            const expired = isExpired(expiry);
-
-            keyDisplay.textContent = key;
-            keyDisplay.className = 'key-display';
-
-            if (expired) {
-                statusText.textContent = 'HẾT HẠN';
-                statusText.className = 'expired';
-                keyDisplay.style.color = '#ff4444';
-                keyDisplay.style.textShadow = '0 0 10px rgba(255,68,68,0.15)';
-            } else {
-                statusText.textContent = 'CÒN HIỆU LỰC';
-                statusText.className = 'active';
-                keyDisplay.style.color = '#66ff99';
-                keyDisplay.style.textShadow = '0 0 10px rgba(102,255,153,0.15)';
-            }
-
-            expiryText.textContent = formatDate(expiry);
-            copyField.value = key;
-        }
-
-        // ─── Tạo key mới ─────────────────────────────────────────────
-        function generateNewKey() {
-            let days = parseInt(dayInput.value, 10);
-            if (isNaN(days) || days < 1) days = 1;
-            if (days > 365) days = 365;
-            dayInput.value = days;
-
-            const newKey = generateKey(24);
-            const expiry = Date.now() + days * 24 * 60 * 60 * 1000;
-
-            saveKey(newKey, expiry);
-            renderState();
-            setMsg('✓ Key mới đã được tạo! Hết hạn sau ' + days + ' ngày.', '#66ff99');
-        }
-
-        // ─── Copy ─────────────────────────────────────────────────────
-        function copyKey() {
-            const { key } = loadKey();
-            if (!key) {
-                setMsg('Không có key để copy. Hãy tạo key trước.', '#ff4444');
-                return;
-            }
-
-            const { expiry } = loadKey();
-            if (expiry && isExpired(expiry)) {
-                setMsg('Key đã hết hạn. Hãy tạo key mới.', '#ff4444');
-                return;
-            }
-
-            navigator.clipboard.writeText(key).then(() => {
-                setMsg('✓ Đã copy key!', '#66ff99');
-                copyField.value = key;
-                copyField.select();
-            }).catch(() => {
-                // Fallback
-                copyField.value = key;
-                copyField.select();
+        try {
+            navigator.clipboard.writeText(key).then(function() {
+                setMsg('Da copy key!', '#66ff99');
+            }).catch(function() {
                 document.execCommand('copy');
-                setMsg('✓ Đã copy key!', '#66ff99');
+                setMsg('Da copy key!', '#66ff99');
             });
+        } catch(e) {
+            document.execCommand('copy');
+            setMsg('Da copy key!', '#66ff99');
         }
+    }
 
-        // ─── Kiểm tra hết hạn mỗi giây ───────────────────────────────
-        setInterval(() => {
-            const { key, expiry } = loadKey();
-            if (key && expiry) {
-                const wasActive = !isExpired(expiry);
-                renderState();
-                const nowExpired = isExpired(expiry);
-                if (wasActive && nowExpired) {
-                    setMsg('⚠ Key đã hết hạn! Hãy tạo key mới.', '#ff4444');
-                }
-            }
-        }, 1000);
-
-        // ─── Events ──────────────────────────────────────────────────
-        generateBtn.addEventListener('click', generateNewKey);
-        copyBtn.addEventListener('click', copyKey);
-
-        // Nhấn Enter ở ô ngày cũng tạo key
-        dayInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') generateNewKey();
-        });
-
-        // ─── Auto-check expired on load ──────────────────────────────
-        (function init() {
-            const { key, expiry } = loadKey();
-            if (key && expiry && isExpired(expiry)) {
-                setMsg('⚠ Key cũ đã hết hạn. Tạo key mới để tiếp tục.', '#ff4444');
-            }
+    setInterval(function() {
+        var data = loadKey();
+        var key = data.key;
+        var expiry = data.expiry;
+        if (key && expiry) {
+            var wasActive = !isExpired(expiry);
             renderState();
-        })();
-    })();
+            var nowExpired = isExpired(expiry);
+            if (wasActive && nowExpired) {
+                setMsg('Key da het han! Hay tao key moi.', '#ff4444');
+            }
+        }
+    }, 1000);
+
+    generateBtn.addEventListener('click', generateNewKey);
+    copyBtn.addEventListener('click', copyKey);
+
+    dayInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') generateNewKey();
+    });
+
+    var data = loadKey();
+    var key = data.key;
+    var expiry = data.expiry;
+    if (key && expiry && isExpired(expiry)) {
+        setMsg('Key cu da het han. Tao key moi de tiep tuc.', '#ff4444');
+    }
+    renderState();
+})();
 </script>
 </body>
-  </html>
+</html>
